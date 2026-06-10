@@ -1,8 +1,13 @@
 from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 app = FastAPI()
 
+# Mount static
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# Set templates
 templates = Jinja2Templates(directory="templates")
 
 posts: list[dict[str, int | str]] = [
@@ -23,8 +28,8 @@ posts: list[dict[str, int | str]] = [
 ]
 
 
-@app.get("/", include_in_schema=False)
-@app.get("/posts", include_in_schema=False)
+@app.get("/", include_in_schema=False, name="home")
+@app.get("/posts", include_in_schema=False, name="posts")
 def home(request: Request):
     return templates.TemplateResponse(
         request=request, name="home.html", context={"posts": posts, "title": "Home"}
