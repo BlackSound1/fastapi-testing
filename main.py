@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 
 import models
 from database import Base, engine, get_db
-from schemas import PostCreate, PostResponse, UserResponse, UserCreate
+from schemas import PostCreate, PostResponse, PostUpdate, UserResponse, UserCreate
 
 
 # Looks at all models that inherit from Base and
@@ -238,6 +238,85 @@ def get_post(post_id: int, db: Annotated[Session, Depends(get_db)]):
     if post:
         return post
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+
+@app.put("/api/v1/posts/{post_id}", response_model=PostResponse)
+def update_post_full(
+    post_id: int, post_data: PostCreate, db: Annotated[Session, Depends(get_db)]
+):
+    """
+    Completely edit a `Post`.
+
+    :param post_id: The `Post` to edit.
+    :param post_data: The new data for the `Post`.
+    :param db: Dependency injection for the DB.
+    :raises HTTPException (404): A 404 error if the `Post` is not found.
+    :raises HTTPException (404): A 404 error if the `User` is not found, when changing the `User`.
+    :return: The updated `Post`.
+    """
+
+    # Try to get the Post
+    result = db.execute(select(models.Post).where(models.Post.id == post_id))
+    post = result.scalars().first()
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
+        )
+
+    # If the client said the post should have a new User, check if the new user even exists
+    if post_data.user_id != post.user_id:
+        result = db.execute(
+            select(models.User).where(models.User.id == post_data.user_id)
+        )
+        user = result.scalars().first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+            )
+
+    post.title = post_data.title
+    post.content = post_data.content
+    post.user_id = post_data.user_id
+
+    db.commit()
+    db.refresh(post)
+
+    return post
+
+
+@app.patch("/api/v1/posts/{post_id}", response_model=PostResponse)
+def update_post_partial(
+    post_id: int, post_data: PostUpdate, db: Annotated[Session, Depends(get_db)]
+):
+    """
+    Partially edit a `Post`.
+
+    :param post_id: The `Post` to edit.
+    :param post_data: The new data for the `Post`.
+    :param db: Dependency injection for the DB.
+    :raises HTTPException (404): A 404 error if the `Post` is not found.
+    :return: The partially updated `Post`.
+    """
+
+    # Try to get the Post
+    result = db.execute(select(models.Post).where(models.Post.id == post_id))
+    post = result.scalars().first()
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
+        )
+
+    # Only get the data that hasn't changed. This lets PATCH work properly
+    update_data = post_data.model_dump(exclude_unset=True)
+
+    # For each of the changed items, set the Posts version of that field to the new value
+    for field, value in update_data.items():
+        setattr(post, field, value)
+
+    db.commit()
+    db.refresh(post)
+
+    return post
 
 
 @app.exception_handler(StarletteHTTPException)
