@@ -237,12 +237,9 @@ def update_user(
             )
 
     # Update the user
-    if user_update.username is not None:
-        user.username = user_update.username
-    if user_update.email is not None:
-        user.email = user_update.email
-    if user_update.image_file is not None:
-        user.image_file = user_update.image_file
+    update_data = user_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(user, field, value)
 
     db.commit()
     db.refresh(user)
