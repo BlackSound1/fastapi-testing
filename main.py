@@ -11,7 +11,14 @@ from sqlalchemy.orm import Session
 
 import models
 from database import Base, engine, get_db
-from schemas import PostCreate, PostResponse, PostUpdate, UserResponse, UserCreate
+from schemas import (
+    PostCreate,
+    PostResponse,
+    PostUpdate,
+    UserResponse,
+    UserCreate,
+    UserUpdate,
+)
 
 
 # Looks at all models that inherit from Base and
@@ -181,6 +188,67 @@ def get_user_posts(user_id: int, db: Annotated[Session, Depends(get_db)]):
     return posts
 
 
+@app.patch("/api/v1/users/{user_id}", response_model=UserResponse)
+def update_user(
+    user_id: int, user_update: UserUpdate, db: Annotated[Session, Depends(get_db)]
+):
+    """
+    Update a given `User`.
+
+    :param user_id: The id of the `User` to update.
+    :param user_update: The data to update the `User` with.
+    :param db: Dependency injection for the DB.
+    :raises HTTPException (404): A 404 error if not found.
+    :raises HTTPException (400): A 400 error if the user is
+        trying to change their username or email to an existing one.
+    :return: The updated `User`.
+    """
+
+    # Try to find the given user
+    result = db.execute(select(models.User).where(models.User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+
+    # If the user is changing their username, check if it already exists
+    if user_update.username is not None and user_update.username != user.username:
+        result = db.execute(
+            select(models.User).where(models.User.username == user_update.username)
+        )
+        existing_user = result.scalars().first()
+        if existing_user:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Username already exists",
+            )
+
+    # Similar for email
+    if user_update.email is not None and user_update.email != user.email:
+        result = db.execute(
+            select(models.User).where(models.User.email == user_update.email)
+        )
+        existing_email = result.scalars().first()
+        if existing_email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email already registered",
+            )
+
+    # Update the user
+    if user_update.username is not None:
+        user.username = user_update.username
+    if user_update.email is not None:
+        user.email = user_update.email
+    if user_update.image_file is not None:
+        user.image_file = user_update.image_file
+
+    db.commit()
+    db.refresh(user)
+    return user
+
+
 @app.get("/api/v1/posts", response_model=list[PostResponse])
 def get_posts(db: Annotated[Session, Depends(get_db)]):
     """
@@ -317,6 +385,26 @@ def update_post_partial(
     db.refresh(post)
 
     return post
+
+
+@app.delete("/api/v1/post/{post_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_post(post_id: int, db: Annotated[Session, Depends(get_db)]):
+    """
+    Delete a given `Post`.
+
+    :param post_id: the `Post` to search for.
+    :param db: Dependency injection for the DB.
+    :raises HTTPException (404): A 404 error if not found.
+    :return: `HTTP 204 NO CONTENT`.
+    """
+    result = db.execute(select(models.Post).where(models.Post.id == post_id))
+    post = result.scalars().first()
+    if not post:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Post not found"
+        )
+    db.delete(post)
+    db.commit()
 
 
 @app.exception_handler(StarletteHTTPException)
