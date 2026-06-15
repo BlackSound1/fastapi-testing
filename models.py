@@ -17,8 +17,12 @@ class User(Base):
         String(200), nullable=True, default=None
     )
 
-    # Creates a 1:n relationship
-    posts: Mapped[list[Post]] = relationship(back_populates="author")
+    # Creates a 1:n relationship. Delete a users posts when the user is deleted.
+    # Also, if a post is from the relationship without being explicitly
+    # deleted somehow, clean it up.
+    posts: Mapped[list[Post]] = relationship(
+        back_populates="author", cascade="all, delete-orphan"
+    )
 
     @property
     def image_path(self) -> str:

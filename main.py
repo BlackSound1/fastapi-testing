@@ -249,6 +249,26 @@ def update_user(
     return user
 
 
+@app.delete("/api/users/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_user(user_id: int, db: Annotated[Session, Depends(get_db)]):
+    """
+    Delete a given `User`.
+
+    :param user_id: The `User` to delete.
+    :param db: Dependency injection for the DB.
+    :raises HTTPException (404): A 404 error if not found.
+    :return: HTTP `204 NO CONTENT`.
+    """
+    result = db.execute(select(models.User).where(models.User.id == user_id))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="User not found"
+        )
+    db.delete(user)
+    db.commit()
+
+
 @app.get("/api/v1/posts", response_model=list[PostResponse])
 def get_posts(db: Annotated[Session, Depends(get_db)]):
     """
