@@ -1,23 +1,25 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.orm import DeclarativeBase
 
-SQLALCHEMY_DATABASE_URL = "sqlite:///./blog.db"
+SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./blog.db"
 
 # DB connection. SQLite normally allows only 1 thread,
 # but FastAPI can handle many. So we disable that threading restriction.
-engine = create_engine(
+engine = create_async_engine(
     SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
 )
 
 # Factory creating DB sessions. Each req should get its own session.
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+AsyncSessionLocal = async_sessionmaker(
+    engine, class_=AsyncSession, expire_on_commit=False
+)
 
 
 class Base(DeclarativeBase):
     pass
 
 
-def get_db():
+async def get_db():
     """Yields a new DB session"""
-    with SessionLocal() as db:
-        yield db
+    async with AsyncSessionLocal() as session:
+        yield session
