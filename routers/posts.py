@@ -22,7 +22,9 @@ async def get_posts(db: Annotated[AsyncSession, Depends(get_db)]):
     :return: All the `Post`s in the DB.
     """
     result = await db.execute(
-        select(models.Post).options(selectinload(models.Post.author))
+        select(models.Post)
+        .options(selectinload(models.Post.author))
+        .order_by(models.Post.date_posted.desc())
     )
     return result.scalars().all()
 
@@ -50,7 +52,7 @@ async def create_post(post: PostCreate, db: Annotated[AsyncSession, Depends(get_
 
     db.add(new_post)
     await db.commit()
-    await db.refresh(new_post)
+    await db.refresh(new_post, attribute_names=["author"])
 
     return new_post
 
