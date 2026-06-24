@@ -16,6 +16,7 @@ class User(Base):
     image_file: Mapped[str | None] = mapped_column(
         String(200), nullable=True, default=None
     )
+    password_hash: Mapped[str] = mapped_column(String(200), nullable=False)
 
     # Creates a 1:n relationship. Delete a users posts when the user is deleted.
     # Also, if a post is from the relationship without being explicitly

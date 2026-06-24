@@ -13,3 +13,4 @@ wheels/
 blog.db
 
 /media/profile_pics/test*.png
+.env
