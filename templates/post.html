@@ -16,20 +16,16 @@
         <h2 class="article-title">{{ post.title }}</h2>
         <p class="article-content">{{ post.content }}</p>
         <!-- Only show edit/delete options if the user is the author -->
-        {% if post.user_id == 1 %}
-          <div class="post-action mt-3 pt-3 border-top">
-            <button type="button"
-                    class="btn btn-outline-secondary me-1"
-                    data-bs-toggle="modal"
-                    data-bs-target="#editModal"
-            >Edit Post</button>
-            <button type="button"
-                    class="btn btn-outline-danger"
-                    data-bs-toggle="modal"
-                    data-bs-target="#deleteModal"
-            >Delete Post</button>
-          </div>
-        {% endif %}
+        <div id="postActions" class="post-action mt-3 pt-3 border-top d-none">
+          <button type="button"
+                  class="btn btn-outline-secondary me-1"
+                  data-bs-toggle="modal"
+                  data-bs-target="#editModal">Edit Post</button>
+          <button type="button"
+                  class="btn btn-outline-danger"
+                  data-bs-toggle="modal"
+                  data-bs-target="#deleteModal">Delete Post</button>
+        </div>
       </div>
     </div>
   </article>
@@ -114,15 +110,32 @@
 
 {% block scripts %}
 <script type="module">
+  import { getCurrentUser, getToken } from "/static/js/auth.js";
   import { getErrorMessage, hideModal, showModal } from "/static/js/utils.js";
 
-  // Get Post ID from Jinja2
-  const postID = {{ post.id }};
+  const postId = {{ post.id }};
+  const postUserId = {{ post.user_id }};
+
+  // Show edit/ delete buttons only if current user owns post
+    async function checkOwnership() {
+      const user = await getCurrentUser();
+      if (user && user.id === postUserId) {
+        document.getElementById('postActions').classList.remove('d-none');
+      }
+    }
+
 
   // Edit post handler
   const editForm = document.getElementById("editPostForm");
   editForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+
+    // If no token, go to Login page
+    const token = getToken();
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
 
     // Put form data into an object
     const formData = new FormData(editForm);
@@ -132,13 +145,28 @@
     delete postData.post_id;
 
     try {
-      const response = await fetch(`/api/v1/posts/${postID}`, {
-        method: "PATCH",
+      const response = await fetch(`/api/v1/posts/${postId}`, {
+        method: 'PATCH',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(postData),
       });
+
+      // If unauthenticated, go to Login page
+      if (response.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+
+      // If forbidden
+      if (response.status === 403) {
+        document.getElementById('errorMessage').textContent = 'You are not authorized to edit this post.';
+        hideModal('editModal');
+        showModal('errorModal');
+        return;
+      }
 
       if (response.ok) {
         document.getElementById("successMessage").textContent = "Post updated successfully!";
@@ -170,10 +198,35 @@
   // Delete post handler
   const deleteButton = document.getElementById("confirmDelete");
   deleteButton.addEventListener("click", async () => {
+    const token = getToken();
+
+    // If no token, go to Login page
+    if (!token) {
+      window.location.href = "/login";
+      return;
+    }
+
     try {
-      const response = await fetch(`/api/v1/posts/${postID}`, {
+      const response = await fetch(`/api/v1/posts/${postId}`, {
         method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        }
       });
+
+      // If unauthenticated, go to Login page
+      if (response.status === 401) {
+        window.location.href = "/login";
+        return;
+      }
+
+      // If forbidden
+      if (response.status === 403) {
+        document.getElementById("errorMessage").textContent = "You are not authorized to delete this post.";
+        hideModal("deleteModal");
+        showModal("errorModal");
+        return;
+      }
   
       if (response.status === 204) {
         // If the post is gone, redirect to home page
@@ -190,5 +243,7 @@
         showModal("errorModal");
     }
   });
+
+  checkOwnership();
 </script>
 {% endblock scripts %}
