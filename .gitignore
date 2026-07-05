@@ -12,5 +12,5 @@ wheels/
 .vscode/
 blog.db
 
-/media/profile_pics/test*.png
+/media/profile_pics/
 .env
