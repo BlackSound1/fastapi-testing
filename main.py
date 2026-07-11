@@ -169,17 +169,61 @@ async def user_posts_page(
 
 @app.get("/login", include_in_schema=False)
 async def login_page(request: Request):
+    """
+    Render the login page.
+
+    :param request: The request.
+    """
     return templates.TemplateResponse(request, "login.html", {"title": "Login"})
 
 
 @app.get("/register", include_in_schema=False)
 async def register_page(request: Request):
+    """
+    Render the register page.
+
+    :param request: The request.
+    """
     return templates.TemplateResponse(request, "register.html", {"title": "Register"})
 
 
 @app.get("/account", include_in_schema=False)
 async def account_page(request: Request):
+    """
+    Render the account page.
+
+    :param request: The request.
+    """
     return templates.TemplateResponse(request, "account.html", {"title": "Account"})
+
+
+@app.get("/forgot-password", include_in_schema=False)
+async def forgot_password_page(request: Request):
+    """
+    Render the forgot password page.
+
+    :param request: The request.
+    """
+    return templates.TemplateResponse(
+        request, "forgot_password.html", {"title": "Forgot Password"}
+    )
+
+
+@app.get("/reset-password", include_in_schema=False)
+async def reset_password_page(request: Request):
+    """
+    Render the reset password page.
+
+    The `/reset-password` URL will have the reset token in it, so it should not
+    be able to send that to another page via the Referrer header.
+
+    :param request: The request.
+    """
+    response = templates.TemplateResponse(
+        request, "reset_password.html", {"title": "Reset Password"}
+    )
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
 
 
 @app.exception_handler(StarletteHTTPException)

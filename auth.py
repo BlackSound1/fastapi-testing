@@ -1,4 +1,6 @@
 from datetime import UTC, datetime, timedelta
+import hashlib
+import secrets
 from typing import Any, Annotated
 import jwt
 from fastapi import Depends, HTTPException, status
@@ -37,6 +39,25 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     :return: Whether the password is correct.
     """
     return password_hash.verify(plain_password, hashed_password)
+
+
+def generate_reset_token() -> str:
+    """
+    Create a URL-safe Base64 token (32 bytes).
+
+    :return: The token.
+    """
+    return secrets.token_urlsafe(32)
+
+
+def hash_reset_token(token: str) -> str:
+    """
+    Hash the given password reset token.
+
+    :param token: The token to hash.
+    :return: The hashed token.
+    """
+    return hashlib.sha256(token.encode()).hexdigest()
 
 
 def create_access_token(
