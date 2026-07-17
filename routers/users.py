@@ -228,8 +228,7 @@ async def reset_password(
         )
 
     # If the token is expired, delete it
-    # Need the replace function for SQLite only. SQLite strips out TZ info, so we add it again
-    if reset_token.expires_at.replace(tzinfo=UTC) < datetime.now(UTC):
+    if reset_token.expires_at < datetime.now(UTC):
         await db.delete(reset_token)
         await db.commit()
         raise HTTPException(

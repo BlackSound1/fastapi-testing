@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from config import settings
-from database import Base, engine, get_db
+from database import engine, get_db
 import models
 from routers import posts, users
 
@@ -25,14 +25,8 @@ async def lifespan(_app: FastAPI):
     """
     Starts up and shuts down the DB connection.
 
-    Loads all the models that inherit from `Base`.
-
     :param _app: The FastAPI app.
     """
-    # Startup
-    async with engine.begin() as conn:
-        # Creates the DB tables if they don't exit. Idempotent
-        await conn.run_sync(Base.metadata.create_all)
     yield
     # Shutdown
     await engine.dispose()

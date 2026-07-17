@@ -49,6 +49,9 @@ class Post(Base):
     date_posted: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=lambda: datetime.now(UTC)
     )
+    # default is Python-side. server_default is db. Important when adding non-null
+    # column to table that already has data
+    likes: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
 
     # Create a n:1 relationship
     author: Mapped[User] = relationship(back_populates="posts")
