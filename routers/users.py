@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, UTC
 from typing import Annotated
 
+from botocore.exceptions import ClientError  # type: ignore[import-untyped]
 from fastapi import (
     APIRouter,
     BackgroundTasks,
@@ -30,7 +31,11 @@ from config import settings
 from database import get_db
 from email_utils import send_password_reset_email
 import models
-from image_utils import delete_profile_image, process_profile_image
+from image_utils import (
+    delete_profile_image,
+    process_profile_image,
+    upload_profile_image,
+)
 from schemas import (
     PaginatedPostsResponse,
     PostResponse,
@@ -481,7 +486,7 @@ async def delete_user(
     await db.commit()
 
     if old_filename:
-        delete_profile_image(old_filename)
+        await delete_profile_image(old_filename)
 
 
 @router.patch("/{user_id}/picture", response_model=UserPrivate)
@@ -500,6 +505,7 @@ async def upload_profile_picture(
     :param db: Dependency injection for the DB.
     :raises HTTPException (403): A 403 error if forbidden.
     :raises HTTPException (400): A 400 error if image is too big or invalid format.
+    :raises HTTPException (500): A 500 error if image can't be uploaded to S3.
     """
     # If wrong user
     if current_user.id != user_id:
@@ -520,11 +526,22 @@ async def upload_profile_picture(
     # Since processing images is CPU-bound, not IO-bound, can't just use async/ await
     # Need to spawn a separate thread for image processing
     try:
-        new_filename = await run_in_threadpool(process_profile_image, content)
+        processed_bytes, new_filename = await run_in_threadpool(
+            process_profile_image, content
+        )
     except UnidentifiedImageError as err:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid image file. Please upload a valid image (JPEG, PNG, GIF, WebP).",
+        ) from err
+
+    # Try uploading to S3
+    try:
+        await upload_profile_image(processed_bytes, new_filename)
+    except ClientError as err:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to upload image. Please try again.",
         ) from err
 
     # Switcheroo
@@ -536,7 +553,7 @@ async def upload_profile_picture(
     await db.refresh(current_user)
 
     if old_filename:
-        delete_profile_image(old_filename)
+        await delete_profile_image(old_filename)
 
     return current_user
 
@@ -579,6 +596,6 @@ async def delete_user_picture(
     await db.commit()
     await db.refresh(current_user)
 
-    delete_profile_image(old_filename)
+    await delete_profile_image(old_filename)
 
     return current_user

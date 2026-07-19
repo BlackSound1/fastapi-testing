@@ -37,9 +37,6 @@ app = FastAPI(lifespan=lifespan)
 # Mount static
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Mount user-generated files
-app.mount("/media", StaticFiles(directory="media"), name="media")
-
 # Set templates
 templates = Jinja2Templates(directory="templates")
 
