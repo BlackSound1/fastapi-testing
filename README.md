@@ -6,6 +6,7 @@ This is a simple full-stack FastAPI-based REST API and webapp project.
 
 - Language: Python
 - Framework: FastAPI
+- Testing: Pytest, Unittest, Moto
 - Package manager, version manager: UV
 - Database: PostgreSQL with SQLAlchemy ORM and Alembic migrations
 - Storage: AWS S3 via Boto3

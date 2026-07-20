@@ -4,6 +4,13 @@ run mode='dev':
     @uv run fastapi {{mode}} main.py
 
 
+[group("Testing")]
+[arg('verbose', short='v', value='-v')]
+[arg('print', short='s', value='-s')]
+test verbose='' print='':
+    @uv run pytest tests/ {{verbose}} {{print}}
+
+
 [group("Docs")]
 [arg('type', long, short='t', pattern='docs|redoc')]
 docs type='docs':
