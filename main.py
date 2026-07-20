@@ -10,7 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from sqlalchemy import func, select
+from sqlalchemy import func, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -43,6 +43,25 @@ templates = Jinja2Templates(directory="templates")
 # Include routers
 app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(posts.router, prefix="/api/v1/posts", tags=["posts"])
+
+
+@app.get("/health")
+async def health_check(db: Annotated[AsyncSession, Depends(get_db)]):
+    """
+    Perform a health check on the DB
+
+    :param db: Dependency injection for the DB.
+    :raises HTTPException (503): A 503 error if the server doesn't respond.
+    :return: `{"status": "healthy"}` JSON if healthy.
+    """
+    try:
+        await db.execute(text("SELECT 1"))
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Database unavailable",
+        ) from exc
+    return {"status": "healthy"}
 
 
 @app.get("/", include_in_schema=False, name="home")
