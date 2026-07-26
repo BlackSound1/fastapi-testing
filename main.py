@@ -45,6 +45,28 @@ app.include_router(users.router, prefix="/api/v1/users", tags=["users"])
 app.include_router(posts.router, prefix="/api/v1/posts", tags=["posts"])
 
 
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """
+    Middleware to intercept and insert certain security headers.
+
+    :param request: The Request to intercept.
+    :param call_next: whatever is being called after the middleware.
+    :return: The response.
+    """
+    response = await call_next(request)
+    response.headers["X-Frame-Options"] = "SAMEORIGIN"
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    # The Referrer-Policy header is set to no-referrer in the /reset-password endpoint
+    if "Referrer-Policy" not in response.headers:
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    if request.url.hostname not in {"localhost", "127.0.0.1"}:
+        response.headers["Strict-Transport-Security"] = (
+            "max-age=63072000; includeSubDomains"
+        )
+    return response
+
+
 @app.get("/health")
 async def health_check(db: Annotated[AsyncSession, Depends(get_db)]):
     """
