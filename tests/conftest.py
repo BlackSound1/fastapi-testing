@@ -31,7 +31,6 @@ from sqlalchemy.pool import NullPool
 from database import Base, get_db
 from main import app
 
-
 pytest_plugins = ["anyio"]
 
 

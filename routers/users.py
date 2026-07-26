@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from typing import Annotated
 
 from botocore.exceptions import ClientError  # type: ignore[import-untyped]
@@ -8,45 +8,45 @@ from fastapi import (
     Depends,
     HTTPException,
     Query,
-    status,
     UploadFile,
+    status,
 )
 from fastapi.security import OAuth2PasswordRequestForm
 from PIL import UnidentifiedImageError
-from sqlalchemy import select, func
 from sqlalchemy import delete as sql_delete
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from starlette.concurrency import run_in_threadpool
 
+import models
 from auth import (
     CurrentUser,
     create_access_token,
-    hash_password,
-    verify_password,
     generate_reset_token,
+    hash_password,
     hash_reset_token,
+    verify_password,
 )
 from config import settings
 from database import get_db
 from email_utils import send_password_reset_email
-import models
 from image_utils import (
     delete_profile_image,
     process_profile_image,
     upload_profile_image,
 )
 from schemas import (
-    PaginatedPostsResponse,
-    PostResponse,
-    UserCreate,
-    UserPublic,
-    UserPrivate,
-    UserUpdate,
-    Token,
     ChangePasswordRequest,
     ForgotPasswordRequest,
+    PaginatedPostsResponse,
+    PostResponse,
     ResetPasswordRequest,
+    Token,
+    UserCreate,
+    UserPrivate,
+    UserPublic,
+    UserUpdate,
 )
 
 router = APIRouter()

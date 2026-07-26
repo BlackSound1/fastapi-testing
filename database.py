@@ -3,7 +3,6 @@ from sqlalchemy.orm import DeclarativeBase
 
 from config import settings
 
-
 # DB connection. SQLite normally allows only 1 thread,
 # but FastAPI can handle many. So we disable that threading restriction.
 engine = create_async_engine(settings.database_url)
