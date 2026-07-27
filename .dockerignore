@@ -1,0 +1,11 @@
+.git/
+tests/
+.vscode/
+.env
+.venv
+*.sqlite3
+*.db
+Icon
+._*
+Justfile
+.python-version
